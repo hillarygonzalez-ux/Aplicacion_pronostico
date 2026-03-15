@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 # FUNCION PROMEDIO MOVIL
-def promedio_movil(serie, n):  
+def promedio_movil(serie, n):
     pronostico = serie.rolling(window=n).mean()
     return pronostico
 
@@ -16,14 +16,18 @@ def medidas_error(real, pron):
         "real": real,
         "pron": pron
     })
+
     df = df.dropna()
+
     mae = (abs(df["real"] - df["pron"])).mean()
     mse = ((df["real"] - df["pron"])**2).mean()
     mape = (abs((df["real"] - df["pron"]) / df["real"])).mean()*100
+
     return round(mae,2), round(mse,2), round(mape,2)
 
 # PAGINA PRINCIPAL
 @app.route("/", methods=["GET","POST"])
+
 def index():
 
     resultados = {}
@@ -39,7 +43,7 @@ def index():
         # leer CSV
         df = pd.read_csv(file)
 
-        productos = df.columns[1:]  # asumiendo que la primera columna es fecha o ID
+        productos = df.columns[1:]
 
         for p in productos:
 
@@ -54,14 +58,22 @@ def index():
                 "pronostico": round(pron.iloc[-1],2)
             }
 
+            
             # GRAFICO
+         
             plt.figure()
+
             plt.plot(df[p], label="Real")
             plt.plot(pron, label="Promedio Movil")
+
             plt.title(f"Producto {p}")
+
             plt.legend()
+
             ruta = f"static/{p}.png"
+
             plt.savefig(ruta)
+
             plt.close()
 
     return render_template("pronostico.html", resultados=resultados)
