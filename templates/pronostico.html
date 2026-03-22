@@ -1,36 +1,79 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Aplicación de Pronósticos</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<title>Pronósticos</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
+
 <div class="container">
-    <h1>Aplicación de Pronósticos</h1>
 
-    <form method="POST" enctype="multipart/form-data">
-        <label>Subir archivo CSV</label>
-        <input type="file" name="file" required>
+<h1>Aplicación de Pronósticos 📊</h1>
 
-        <label>Valor de N</label>
-        <input type="number" name="n" min="1" required>
+{% if error %}
+<p style="color:red">{{error}}</p>
+{% endif %}
 
-        <button type="submit">Calcular Pronóstico</button>
-    </form>
+<form method="POST" enctype="multipart/form-data">
 
-    {% if resultados %}
-    <h2>Resultados</h2>
-    <div class="resultados-grid">
-        {% for prod, info in resultados.items() %}
-            <div class="resultado">
-                <h3>{{ prod }}</h3>
-                <p><strong>Pronóstico:</strong> {{ info.pronostico }}</p>
-                <p><strong>MAE:</strong> {{ info.mae }}, <strong>MSE:</strong> {{ info.mse }}, <strong>MAPE:</strong> {{ info.mape }}%</p>
-                <img src="{{ url_for('static', filename=prod + '.png') }}" alt="Gráfico {{ prod }}">
-            </div>
-        {% endfor %}
-    </div>
-    {% endif %}
+<label>Archivo CSV</label>
+<input type="file" name="file" required>
+
+<label>Valor de N</label>
+<input type="number" name="n" required>
+
+<label>Método</label>
+<select name="metodo">
+<option value="promedio">Promedio Móvil</option>
+<option value="ses">Suavización Exponencial</option>
+<option value="prophet">Prophet</option>
+</select>
+
+<label>Fecha final de proyección</label>
+<input type="date" name="fecha_fin" required>
+
+<button type="submit">Calcular</button>
+
+</form>
+
+{% if resultados %}
+
+<h2>Resultados</h2>
+
+{% for producto, datos in resultados.items() %}
+<h3>{{producto}}</h3>
+<p>MAE: {{datos.mae}}</p>
+<p>MSE: {{datos.mse}}</p>
+<p>MAPE: {{datos.mape}}%</p>
+<img src="{{ url_for('static', filename=producto + '.png') }}">
+{% endfor %}
+
+<h2>Comparación de modelos</h2>
+
+<table>
+<tr>
+<th>Producto</th>
+<th>Promedio</th>
+<th>SES</th>
+<th>Prophet</th>
+</tr>
+
+{% for producto, datos in tabla.items() %}
+<tr>
+<td>{{producto}}</td>
+<td>{{datos.Promedio}}</td>
+<td>{{datos.SES}}</td>
+<td>{{datos.Prophet}}</td>
+</tr>
+{% endfor %}
+
+</table>
+
+{% endif %}
+
 </div>
+
 </body>
 </html>
