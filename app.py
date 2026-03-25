@@ -18,9 +18,17 @@ def promedio_movil(serie, n):
 # MEDIDAS DE ERROR
 def medidas_error(real, pron):
     df = pd.DataFrame({"real": real, "pron": pron}).dropna()
+    
+    # evitar división por cero en MAPE
+    df = df[df["real"] != 0]
+
+    if len(df) == 0:
+        return 0, 0, 0
+
     mae = abs(df["real"] - df["pron"]).mean()
     mse = ((df["real"] - df["pron"])**2).mean()
     mape = (abs((df["real"] - df["pron"]) / df["real"])).mean()*100
+
     return round(mae,2), round(mse,2), round(mape,2)
 
 @app.route("/", methods=["GET","POST"])
@@ -37,7 +45,10 @@ def index():
         if not archivo_valido(file.filename):
             return render_template("pronostico.html", error="Solo CSV")
 
-        df = pd.read_csv(file)
+        try:
+            df = pd.read_csv(file)
+        except:
+            return render_template("pronostico.html", error="Error leyendo el archivo")
 
         if "Fecha" not in df.columns:
             return render_template("pronostico.html", error="Debe existir columna Fecha")
@@ -65,29 +76,43 @@ def index():
 
             # PROPHET
             df_prophet = df[["Fecha", p]].rename(columns={"Fecha":"ds", p:"y"})
-            modelo_p = Prophet()
-            modelo_p.fit(df_prophet)
 
-            dias = (pd.to_datetime(fecha_fin) - df["Fecha"].max()).days
-            future = modelo_p.make_future_dataframe(periods=dias)
-            forecast = modelo_p.predict(future)
+            try:
+                modelo_p = Prophet()
+                modelo_p.fit(df_prophet)
 
-            mae_p, mse_p, mape_p = medidas_error(df_prophet["y"], forecast["yhat"][:len(df)])
+                dias = (pd.to_datetime(fecha_fin) - df["Fecha"].max()).days
+                dias = max(dias, 0)  # evita negativos
 
-            # SELECCION
+                future = modelo_p.make_future_dataframe(periods=dias)
+                forecast = modelo_p.predict(future)
+
+                mae_p, mse_p, mape_p = medidas_error(
+                    df_prophet["y"], forecast["yhat"][:len(df)]
+                )
+
+            except:
+                forecast = None
+                mae_p, mse_p, mape_p = 0, 0, 0
+
+            # SELECCION DEL METODO
             if metodo == "promedio":
                 pron = pm
+                resultados[p] = {"mae": mae_pm, "mse": mse_pm, "mape": mape_pm}
+
             elif metodo == "ses":
                 pron = ses
+                resultados[p] = {"mae": mae_ses, "mse": mse_ses, "mape": mape_ses}
+
             else:
-                pron = forecast["yhat"]
+                pron = forecast["yhat"] if forecast is not None else []
+                resultados[p] = {"mae": mae_p, "mse": mse_p, "mape": mape_p}
 
-            # GRAFICA 
+            # GRAFICA
             plt.figure(figsize=(6,4))
-
             plt.plot(df["Fecha"], serie, marker='o', label="Real")
 
-            if metodo == "prophet":
+            if metodo == "prophet" and forecast is not None:
                 plt.plot(forecast["ds"], forecast["yhat"], label="Prophet")
             else:
                 plt.plot(df["Fecha"], pron, marker='o', label=metodo)
@@ -96,18 +121,16 @@ def index():
             plt.xlabel("Fecha")
             plt.ylabel("Ventas")
 
-            plt.xticks(rotation=45)  # rotar fechas para que se vean
+            plt.xticks(rotation=45)
             plt.grid(True, linestyle="--", alpha=0.5)
-
             plt.legend()
 
             ruta = f"static/{p}.png"
-            plt.tight_layout()  # evita que se corten fechas
+            plt.tight_layout()
             plt.savefig(ruta)
             plt.close()
 
-            resultados[p] = {"mae": mae_pm, "mse": mse_pm, "mape": mape_pm}
-
+            # TABLA COMPARATIVA
             tabla[p] = {
                 "Promedio": mape_pm,
                 "SES": mape_ses,
