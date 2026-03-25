@@ -1,37 +1,27 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<title>Pronósticos</title>
+<title>Dashboard</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
 
-<div class="container">
+<div class="main-container">
 
-<h1>Aplicación de Pronósticos</h1>
+<h1 class="title">Aplicación de Pronósticos</h1>
 
-{% if error %}
-<p style="color:red">{{error}}</p>
-{% endif %}
+<form method="POST" enctype="multipart/form-data" class="form-card">
 
-<form method="POST" enctype="multipart/form-data">
-
-<label>Archivo CSV</label>
 <input type="file" name="file" required>
+<input type="number" name="n" placeholder="Valor de N" required>
 
-<label>Valor de N</label>
-<input type="number" name="n" required>
-
-<label>Método</label>
 <select name="metodo">
-<option value="promedio">Promedio Móvil</option>
-<option value="ses">Suavización Exponencial</option>
+<option value="promedio">Promedio</option>
+<option value="ses">SES</option>
 <option value="prophet">Prophet</option>
 </select>
 
-<label>Fecha final de proyección</label>
 <input type="date" name="fecha_fin" required>
 
 <button type="submit">Calcular</button>
@@ -40,17 +30,30 @@
 
 {% if resultados %}
 
-<h2>Resultados</h2>
+<div class="grid">
 
 {% for producto, datos in resultados.items() %}
-<h3>{{producto}}</h3>
-<p>MAE: {{datos.mae}}</p>
-<p>MSE: {{datos.mse}}</p>
-<p>MAPE: {{datos.mape}}%</p>
+
+<div class="card">
+
+<h2>{{producto}}</h2>
+
+<div class="metrics">
+<p>MAE<br><span>{{datos.mae}}</span></p>
+<p>MSE<br><span>{{datos.mse}}</span></p>
+<p>MAPE<br><span>{{datos.mape}}%</span></p>
+</div>
+
 <img src="{{ url_for('static', filename=producto + '.png') }}">
+
+</div>
+
 {% endfor %}
 
-<h2>Comparación de modelos</h2>
+</div>
+
+<div class="table-card">
+<h2>Comparación</h2>
 
 <table>
 <tr>
@@ -70,6 +73,7 @@
 {% endfor %}
 
 </table>
+</div>
 
 {% endif %}
 
